@@ -9,6 +9,7 @@ import (
 func main() {
 
 	_, err := utils.NewDatabase()
+
 	if err != nil {
 		fmt.Print(err)
 	}

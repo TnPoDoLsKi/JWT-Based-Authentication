@@ -2,13 +2,14 @@ package server
 
 import (
 	"JWT-Based-Authentication/controllers"
+	"log"
 	"net/http"
 )
 
 func Run(port string) {
 
 	userRoutes()
-	http.ListenAndServe(":8000", nil)
+	log.Print(http.ListenAndServe(":8000", nil))
 }
 
 func userRoutes() {

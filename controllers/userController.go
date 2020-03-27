@@ -4,6 +4,7 @@ import (
 	"JWT-Based-Authentication/models"
 	"JWT-Based-Authentication/utils"
 	"encoding/json"
+	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"io/ioutil"
@@ -21,25 +22,34 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.ErrorResponse(w, http.StatusInternalServerError, 1000, err)
+		return
 	}
 
 	err = json.Unmarshal(b, &requestUser)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.ErrorResponse(w, http.StatusBadRequest, 1001, err)
+		return
 	}
 
-	databaseUser.FindUserByEmail(requestUser.Email)
+	err = databaseUser.FindUserByEmail(requestUser.Email)
+
+	if err != nil {
+		utils.ErrorResponse(w, http.StatusInternalServerError, 1002, err)
+		return
+	}
 
 	if requestUser.Email != databaseUser.Email {
-		http.Error(w, "Email not found", http.StatusBadRequest)
+		utils.ErrorResponse(w, http.StatusBadRequest, 1003, errors.New("Email or Password invalide"))
+		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(databaseUser.Password), []byte(requestUser.Password))
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.ErrorResponse(w, http.StatusBadRequest, 1003, errors.New("Email or Password invalide"))
+		return
 	}
 
 	tokenString, err := GenerateToken(databaseUser.Id)
@@ -56,32 +66,43 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.ErrorResponse(w, http.StatusBadRequest, 1004, err)
+
+		return
 	}
 
 	err = json.Unmarshal(body, &u)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.ErrorResponse(w, http.StatusBadRequest, 1005, err)
+		return
 	}
 
 	if bol, err := utils.EmailValidation(u.Email); !bol {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.ErrorResponse(w, http.StatusBadRequest, 1006, err)
+		return
 	}
 
 	if bol, err := utils.PasswordValidation(u.Password); !bol {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.ErrorResponse(w, http.StatusBadRequest, 1007, err)
+		return
 	}
 
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(u.Password), 12)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.ErrorResponse(w, http.StatusInternalServerError, 1008, err)
+		return
 	}
 
 	u.Password = string(hashedPassword)
 
-	u.SaveUser()
+	err = u.SaveUser()
+
+	if err != nil {
+		utils.ErrorResponse(w, http.StatusInternalServerError, 1008, err)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("Created successfully"))

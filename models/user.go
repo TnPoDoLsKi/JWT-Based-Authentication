@@ -18,10 +18,39 @@ func CreateTable() {
 		panic(err)
 	}
 }
-func (user *User) SaveUser() {
-	utils.DB.NamedExec("INSERT INTO user VALUES ( :id, :username,:email, :password)", user)
+func (user *User) SaveUser() error {
+	tx, err := utils.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+	stmt, err := tx.Prepare("INSERT INTO user(username , email , password) VALUES ( ?,?,?)")
+
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.Exec(user.Username, user.Email, user.Password)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
-func (user *User) FindUserByEmail(email string) {
-	utils.DB.Get(user, "SELECT * FROM user WHERE email = ? ", email)
+func (user *User) FindUserByEmail(email string) error {
+
+	err := utils.DB.Get(user, "SELECT * FROM user WHERE email = ? ", email)
+	if err != nil {
+		return err
+	}
+	return err
 }
